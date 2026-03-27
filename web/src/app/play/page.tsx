@@ -18,6 +18,7 @@ type Settings = {
   sound: boolean;
   showLegalMoves: boolean;
   showCoordinates: boolean;
+  temperature: number;
 };
 
 function playMoveSound(type: "move" | "capture" | "check", enabled: boolean) {
@@ -51,6 +52,7 @@ export default function PlayPage() {
     sound: true,
     showLegalMoves: true,
     showCoordinates: true,
+    temperature: 1.0,
   });
 
   const moveListRef = useRef<HTMLDivElement>(null);
@@ -77,7 +79,7 @@ export default function PlayPage() {
       setStatus("AI is thinking...");
 
       try {
-        const data = await predictMove(currentGame.fen(), model);
+        const data = await predictMove(currentGame.fen(), model, settingsRef.current.temperature);
         if (data.move) {
           const move = currentGame.move(data.move);
           if (move) {
@@ -397,6 +399,25 @@ export default function PlayPage() {
                   </div>
                 </label>
               ))}
+              <div className="py-1.5">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-zinc-300">Temperature</span>
+                  <span className="text-xs font-mono text-zinc-400">{settings.temperature.toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="2.0"
+                  step="0.1"
+                  value={settings.temperature}
+                  onChange={(e) => setSettings((s) => ({ ...s, temperature: parseFloat(e.target.value) }))}
+                  className="w-full accent-blue-500"
+                />
+                <div className="flex justify-between text-xs text-zinc-600 mt-0.5">
+                  <span>focused</span>
+                  <span>random</span>
+                </div>
+              </div>
             </div>
           )}
         </div>

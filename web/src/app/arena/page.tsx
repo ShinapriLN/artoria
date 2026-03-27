@@ -25,8 +25,11 @@ export default function ArenaPage() {
   const [evalScore, setEvalScore] = useState<number | null>(null);
   const [lockedWhite, setLockedWhite] = useState<ModelSize | null>(null);
   const [lockedBlack, setLockedBlack] = useState<ModelSize | null>(null);
+  const [temperature, setTemperature] = useState(1.0);
   const stopRef = useRef(false);
   const moveListRef = useRef<HTMLDivElement>(null);
+  const temperatureRef = useRef(temperature);
+  useEffect(() => { temperatureRef.current = temperature; }, [temperature]);
 
   useEffect(() => {
     if (viewingMoveIdx === null && moveListRef.current) {
@@ -55,7 +58,7 @@ export default function ArenaPage() {
     while (!g.isGameOver() && moveCount < maxMoves && !stopRef.current) {
       const currentModel = g.turn() === "w" ? white : black;
       try {
-        const data = await predictMove(g.fen(), currentModel);
+        const data = await predictMove(g.fen(), currentModel, temperatureRef.current);
         if (!data.move) break;
 
         let m;
@@ -203,6 +206,28 @@ export default function ArenaPage() {
           {/* Model selectors */}
           <ModelSelector color="white" value={whiteModel} locked={lockedWhite} />
           <ModelSelector color="black" value={blackModel} locked={lockedBlack} />
+
+          {/* Temperature */}
+          <div className="px-3 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/50">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs text-zinc-500">Temperature</span>
+              <span className="text-xs font-mono text-zinc-400">{temperature.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="2.0"
+              step="0.1"
+              value={temperature}
+              disabled={running}
+              onChange={(e) => setTemperature(parseFloat(e.target.value))}
+              className="w-full accent-blue-500 disabled:opacity-40"
+            />
+            <div className="flex justify-between text-xs text-zinc-600 mt-0.5">
+              <span>focused</span>
+              <span>random</span>
+            </div>
+          </div>
 
           {/* Start / Stop */}
           {!running ? (

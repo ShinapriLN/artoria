@@ -67,6 +67,7 @@ app.add_middleware(
 class PredictRequest(BaseModel):
     fen: str
     model_size: str = "small"
+    temperature: float = 1.0
 
 
 @app.on_event("startup")
@@ -119,21 +120,26 @@ async def predict(req: PredictRequest):
             logits, value = model(tokens)
 
         eval_score = value.item()
-        probs = torch.softmax(logits[0], dim=0)
+        temp = max(0.01, req.temperature)
 
-        candidates = []
+        # Mask logits to legal moves only, then sample
+        legal_indices = []
+        legal_ucis = []
         for m in legal_moves:
             idx = tokenizer.action_to_class(m.uci())
             if idx != -1:
-                candidates.append((m.uci(), probs[idx].item()))
+                legal_indices.append(idx)
+                legal_ucis.append(m.uci())
 
-        candidates.sort(key=lambda x: x[1], reverse=True)
-
-        if not candidates:
+        if not legal_indices:
             import random
             return {"move": random.choice(legal_moves).uci(), "status": "random (policy failed)", "eval": eval_score}
 
-        best_move = candidates[0][0]
+        legal_logits = logits[0][legal_indices] / temp
+        probs = torch.softmax(legal_logits, dim=0)
+        chosen_idx = int(torch.multinomial(probs, num_samples=1).item())
+        best_move = legal_ucis[chosen_idx]
+
         return {"move": best_move, "status": f"ai ({size})", "eval": eval_score}
 
     except Exception as e:
