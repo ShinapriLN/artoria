@@ -113,7 +113,12 @@ export default function PlayPage() {
     if (thinking || !targetSquare || viewingMoveIdx !== null || game.isGameOver()) return false;
 
     const gameCopy = new Chess(game.fen());
-    const move = gameCopy.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
+    let move;
+    try {
+      move = gameCopy.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
+    } catch {
+      return false;
+    }
     if (!move) return false;
 
     const model = lockedModel ?? modelSize;
@@ -140,7 +145,8 @@ export default function PlayPage() {
     // Try to complete a move if a square is already selected
     if (selectedSquare && selectedSquare !== square) {
       const gameCopy = new Chess(game.fen());
-      const move = gameCopy.move({ from: selectedSquare, to: square, promotion: "q" });
+      let move;
+      try { move = gameCopy.move({ from: selectedSquare, to: square, promotion: "q" }); } catch { /* invalid */ }
       if (move) {
         const model = lockedModel ?? modelSize;
         if (!lockedModel) setLockedModel(modelSize);
