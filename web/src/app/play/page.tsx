@@ -37,11 +37,16 @@ function playMoveSound(type: "move" | "capture" | "check", enabled: boolean) {
   } catch {}
 }
 
+type PlayerColor = "white" | "black" | "random";
+
 export default function PlayPage() {
   const [game, setGame] = useState(new Chess());
+  const [playerColor, setPlayerColor] = useState<PlayerColor>("white");
+  const [activeColor, setActiveColor] = useState<"white" | "black">("white"); // resolved color in-game
+  const [gameStarted, setGameStarted] = useState(false);
   const [modelSize, setModelSize] = useState<ModelSize>("small");
   const [lockedModel, setLockedModel] = useState<ModelSize | null>(null);
-  const [status, setStatus] = useState("Your turn (White)");
+  const [status, setStatus] = useState("Pick a color and start");
   const [evalScore, setEvalScore] = useState<number | null>(null);
   const [thinking, setThinking] = useState(false);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
@@ -112,8 +117,11 @@ export default function PlayPage() {
     []
   );
 
+  const playerTurn = activeColor === "white" ? "w" : "b";
+
   function onDrop({ sourceSquare, targetSquare }: { piece: { pieceType: string; isSparePiece: boolean; position: string }; sourceSquare: string; targetSquare: string | null }) {
-    if (thinking || !targetSquare || viewingMoveIdx !== null || game.isGameOver()) return false;
+    if (!gameStarted || thinking || !targetSquare || viewingMoveIdx !== null || game.isGameOver()) return false;
+    if (game.turn() !== playerTurn) return false;
 
     const gameCopy = new Chess(game.fen());
     let move;
@@ -143,7 +151,12 @@ export default function PlayPage() {
   }
 
   function onSquareClick({ square }: { piece: { pieceType: string } | null; square: string }) {
+    // Clear highlight on left-click if one exists
+    if (highlights[square]) {
+      setHighlights((prev) => { const next = { ...prev }; delete next[square]; return next; });
+    }
     if (thinking || viewingMoveIdx !== null || game.isGameOver()) return;
+    if (game.turn() !== playerTurn) return;
 
     // Try to complete a move if a square is already selected
     if (selectedSquare && selectedSquare !== square) {
@@ -167,7 +180,7 @@ export default function PlayPage() {
     }
 
     const piece = game.get(square as Parameters<typeof game.get>[0]);
-    if (piece && piece.color === "w") {
+    if (piece && piece.color === playerTurn) {
       setSelectedSquare(square === selectedSquare ? null : square);
     } else {
       setSelectedSquare(null);
@@ -200,9 +213,36 @@ export default function PlayPage() {
     });
   }
 
+  function startGame(color?: PlayerColor) {
+    const chosen = color ?? playerColor;
+    const resolved: "white" | "black" = chosen === "random"
+      ? (Math.random() < 0.5 ? "white" : "black")
+      : chosen;
+
+    const newGame = new Chess();
+    const model = modelSize;
+
+    setGame(newGame);
+    setActiveColor(resolved);
+    setGameStarted(true);
+    setLockedModel(model);
+    setStatus(resolved === "white" ? "Your turn (White)" : "AI is thinking...");
+    setEvalScore(null);
+    setMoveHistory([]);
+    setViewingMoveIdx(null);
+    setSelectedSquare(null);
+    setHighlights({});
+
+    if (resolved === "black") {
+      makeAIMove(newGame, [], model);
+    }
+  }
+
   function resetGame() {
     setGame(new Chess());
-    setStatus("Your turn (White)");
+    setGameStarted(false);
+    setActiveColor(playerColor === "random" ? "white" : playerColor);
+    setStatus("Pick a color and start");
     setEvalScore(null);
     setThinking(false);
     setMoveHistory([]);
@@ -255,8 +295,8 @@ export default function PlayPage() {
                 position: boardFen,
                 onPieceDrop: onDrop,
                 onSquareClick,
-                boardOrientation: "white",
-                allowDragging: isLive && !game.isGameOver() && !thinking,
+                boardOrientation: activeColor,
+                allowDragging: gameStarted && isLive && !game.isGameOver() && !thinking && game.turn() === playerTurn,
                 showNotation: settings.showCoordinates,
                 squareStyles: { ...getSquareStyles(), ...highlights },
                 onSquareRightClick: onRightClick,
@@ -289,6 +329,29 @@ export default function PlayPage() {
               </p>
             </div>
           )}
+
+          {/* Color selector */}
+          <div className="px-3 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/50">
+            <p className="text-xs text-zinc-500 mb-2">Play as</p>
+            <div className="flex gap-1.5">
+              {(["white", "black", "random"] as PlayerColor[]).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => !gameStarted && setPlayerColor(c)}
+                  disabled={gameStarted}
+                  className={`flex-1 py-1 rounded text-xs font-medium transition-colors capitalize ${
+                    playerColor === c
+                      ? "bg-blue-600 text-white"
+                      : gameStarted
+                      ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  }`}
+                >
+                  {c === "white" ? "⬜" : c === "black" ? "⬛" : "🎲"} {c}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Model selector */}
           <div className="px-3 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/50">
@@ -369,12 +432,21 @@ export default function PlayPage() {
 
           {/* Buttons */}
           <div className="flex gap-2">
-            <button
-              onClick={resetGame}
-              className="flex-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              New Game
-            </button>
+            {!gameStarted ? (
+              <button
+                onClick={() => startGame()}
+                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+              >
+                Start
+              </button>
+            ) : (
+              <button
+                onClick={resetGame}
+                className="flex-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                New Game
+              </button>
+            )}
             <button
               onClick={() => setShowSettings(!showSettings)}
               title="Settings"
