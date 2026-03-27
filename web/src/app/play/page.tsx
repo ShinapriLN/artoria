@@ -47,6 +47,7 @@ export default function PlayPage() {
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
   const [viewingMoveIdx, setViewingMoveIdx] = useState<number | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [highlights, setHighlights] = useState<Record<string, React.CSSProperties>>({});
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     sound: true,
@@ -188,6 +189,17 @@ export default function PlayPage() {
     return styles;
   }
 
+  function onRightClick({ square }: { piece: { pieceType: string } | null; square: string }) {
+    setHighlights((prev) => {
+      if (prev[square]) {
+        const next = { ...prev };
+        delete next[square];
+        return next;
+      }
+      return { ...prev, [square]: { background: "rgba(220, 38, 38, 0.5)" } };
+    });
+  }
+
   function resetGame() {
     setGame(new Chess());
     setStatus("Your turn (White)");
@@ -197,6 +209,7 @@ export default function PlayPage() {
     setLockedModel(null);
     setViewingMoveIdx(null);
     setSelectedSquare(null);
+    setHighlights({});
   }
 
   // Value head outputs tanh: [-1, 1] where +1 = white winning, -1 = black winning
@@ -245,7 +258,8 @@ export default function PlayPage() {
                 boardOrientation: "white",
                 allowDragging: isLive && !game.isGameOver() && !thinking,
                 showNotation: settings.showCoordinates,
-                squareStyles: getSquareStyles(),
+                squareStyles: { ...getSquareStyles(), ...highlights },
+                onSquareRightClick: onRightClick,
                 boardStyle: {
                   borderRadius: "6px",
                   boxShadow: "0 4px 24px rgba(0,0,0,0.4)",

@@ -26,6 +26,7 @@ export default function ArenaPage() {
   const [lockedWhite, setLockedWhite] = useState<ModelSize | null>(null);
   const [lockedBlack, setLockedBlack] = useState<ModelSize | null>(null);
   const [temperature, setTemperature] = useState(1.0);
+  const [highlights, setHighlights] = useState<Record<string, React.CSSProperties>>({});
   const stopRef = useRef(false);
   const moveListRef = useRef<HTMLDivElement>(null);
   const temperatureRef = useRef(temperature);
@@ -106,6 +107,17 @@ export default function ArenaPage() {
     stopRef.current = true;
   }
 
+  function onRightClick({ square }: { piece: { pieceType: string } | null; square: string }) {
+    setHighlights((prev) => {
+      if (prev[square]) {
+        const next = { ...prev };
+        delete next[square];
+        return next;
+      }
+      return { ...prev, [square]: { background: "rgba(220, 38, 38, 0.5)" } };
+    });
+  }
+
   // Value head outputs tanh: [-1, 1] where +1 = white winning, -1 = black winning
   function evalToWhitePercent(): number {
     if (evalScore === null) return 50;
@@ -173,6 +185,8 @@ export default function ArenaPage() {
               options={{
                 position: boardFen,
                 allowDragging: false,
+                squareStyles: highlights,
+                onSquareRightClick: onRightClick,
                 boardStyle: {
                   borderRadius: "6px",
                   boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
