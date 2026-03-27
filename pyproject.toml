@@ -1,0 +1,18 @@
+[project]
+name = "artoria"
+version = "0.1.0"
+description = "Grandmaster-Level Chess Without Search"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.0.0",
+    "chess>=1.11.2",
+    "datasets>=4.8.4",
+    "fastapi>=0.135.2",
+    "uvicorn>=0.42.0",
+    "huggingface-hub>=0.20.0",
+]
+
+[project.scripts]
+artoria-train = "artoria.train:main"
+artoria-eval = "artoria.evaluate:main"
