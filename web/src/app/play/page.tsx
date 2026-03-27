@@ -197,12 +197,10 @@ export default function PlayPage() {
     setSelectedSquare(null);
   }
 
-  // Eval bar: assume evalScore is roughly a white-win probability [0..1], or centipawn-like value
+  // Value head outputs tanh: [-1, 1] where +1 = white winning, -1 = black winning
   function evalToWhitePercent(): number {
     if (evalScore === null) return 50;
-    if (evalScore >= 0 && evalScore <= 1) return evalScore * 100;
-    // centipawn fallback: clamp ±1000cp → 0..100
-    return Math.round(((Math.max(-10, Math.min(10, evalScore / 100)) + 10) / 20) * 100);
+    return ((Math.max(-1, Math.min(1, evalScore)) + 1) / 2) * 100;
   }
 
   const boardFen = viewingMoveIdx !== null ? moveHistory[viewingMoveIdx].fen : game.fen();
