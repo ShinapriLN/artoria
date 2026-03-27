@@ -151,10 +151,8 @@ export default function PlayPage() {
   }
 
   function onSquareClick({ square }: { piece: { pieceType: string } | null; square: string }) {
-    // Clear highlight on left-click if one exists
-    if (highlights[square]) {
-      setHighlights((prev) => { const next = { ...prev }; delete next[square]; return next; });
-    }
+    // Clear all highlights on any left-click
+    if (Object.keys(highlights).length > 0) setHighlights({});
     if (thinking || viewingMoveIdx !== null || game.isGameOver()) return;
     if (game.turn() !== playerTurn) return;
 
