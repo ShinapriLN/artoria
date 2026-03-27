@@ -6,6 +6,7 @@ import torch
 import chess
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from huggingface_hub import hf_hub_download
 
@@ -77,6 +78,21 @@ async def startup():
         size = size.strip()
         if size in MODEL_SIZES:
             models[size] = load_model(size)
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return """<!DOCTYPE html>
+<html style="height:100%;margin:0;padding:0">
+<head><title>Artoria Zero</title></head>
+<body style="height:100%;margin:0;padding:0;overflow:hidden">
+<iframe
+  src="https://artoria-zero.vercel.app"
+  style="width:100%;height:100vh;border:none;display:block"
+  allow="autoplay"
+></iframe>
+</body>
+</html>"""
 
 
 @app.get("/health")
