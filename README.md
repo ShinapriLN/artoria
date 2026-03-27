@@ -1,105 +1,109 @@
-# Artoria Zero ♟️
+# Artoria Zero
 
-**Artoria Zero** is a deep learning chess engine prototype based on the research paper **"Grandmaster-Level Chess Without Search"** ([arXiv:2402.04494](https://arxiv.org/abs/2402.04494)).
+Grandmaster-Level Chess Without Search. A decoder-only transformer that plays chess through pure pattern recognition — no MCTS, no Alpha-Beta, no search tree.
 
-Unlike traditional engines (Stockfish) that rely on Alpha-Beta search, or AlphaZero which uses MCTS, Artoria Zero is a **Decoder-Only Transformer** trained via Behavioral Cloning to predict the next best move directly from the board state (FEN), similar to how an LLM predicts the next token.
+Based on [arXiv:2402.04494](https://arxiv.org/abs/2402.04494).
 
-<p align="center">
-  <img src="board/static/style.css" alt="Artoria Chess Playground" width="600">
-  <br>
-  <em>Artoria Web Playground (Glassmorphism UI)</em>
-</p>
+## Architecture
 
-## ✨ Features
+```
+FEN String -> [ASCII Tokenizer, 79 tokens]
+  -> Token Embedding + Positional Embedding
+  -> N x Transformer Block (RMSNorm + Bidirectional Attention + SwiGLU)
+  -> Mean Pooling
+  -> Policy Head (move classification, ~4544 classes)
+  -> Value Head (position eval, tanh [-1, 1])
+```
 
-- **Transformer Architecture**: RMSNorm, SwiGLU, and Learned Positional Embeddings (Context Len 79).
-- **Behavioral Cloning**: Predicts the next move (UCI format) as a classification task (~4544 classes).
-- **HPC-Ready Pipeline**:
-  - Streaming support (Hugging Face `Lichess/standard-chess-games`).
-  - Local PGN file support avoiding memory bottlenecks.
-- **Robust Training**: Supports partial checkpoint loading (Transfer Learning / Architecture evolution).
-- **Web Playground**: Includes a Flask-based web interface with a beautiful glassmorphism UI for testing.
+## Model Variants
 
-## 🛠️ Installation
+| Variant | d_model | Layers | Heads | Params | HF Path |
+|---------|---------|--------|-------|--------|---------|
+| Small | 256 | 8 | 8 | ~19M | `small/checkpoint.pt` |
+| Mid | 512 | 16 | 8 | ~100M | `mid/checkpoint.pt` |
+| Large | 1024 | 40 | 32 | ~500M | `large/checkpoint.pt` |
+
+Models: [Shinapri/artoria-zero](https://huggingface.co/Shinapri/artoria-zero)
+
+## Project Structure
+
+```
+artoria/
+├── artoria/           # Core Python package
+│   ├── model.py       # Model architecture (RMSNorm, SwiGLU, Transformer)
+│   ├── tokenizer.py   # FEN tokenizer + move vocabulary
+│   ├── data.py        # Dataset processors (Lichess, Angeluriot)
+│   ├── train.py       # Training pipeline
+│   └── evaluate.py    # Evaluation pipeline
+├── api/               # HF Space backend (FastAPI + Docker)
+│   ├── app.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── web/               # Frontend (Next.js + Tailwind)
+│   └── src/app/
+│       ├── page.tsx        # Landing page
+│       ├── play/page.tsx   # Play against AI
+│       ├── arena/page.tsx  # Model vs Model
+│       └── about/page.tsx  # Architecture docs
+└── models/            # Local checkpoints (git-ignored)
+    ├── small/
+    ├── mid/
+    └── large/
+```
+
+## Quick Start
+
+### Training
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/artoria.git
-cd artoria
+# Streaming from Lichess
+python -m artoria.train --config models/small/config.json --max_steps 10000 --out_dir ./checkpoints
 
-# Install dependencies
-pip install -r requirements.txt
+# Local PGN file
+python -m artoria.train --config models/small/config.json --data_path games.pgn --out_dir ./checkpoints
+
+# Resume training
+python -m artoria.train --config models/small/config.json --resume_from ./checkpoints/checkpoint_final.pt
 ```
 
-**Requirements:** `torch`, `python-chess`, `datasets`, `numpy`, `flask`.
-
-## 🚀 Usage
-
-### 1. Training
-
-You can train on streaming data (internet required) or a local PGN file.
-
-**Streaming (Hugging Face):**
+### Evaluation
 
 ```bash
-python train.py --max_games 100000 --out_dir ./checkpoints --log_every 100
+python -m artoria.evaluate --config models/small/config.json --checkpoint ./checkpoints --test_games 1000
 ```
 
-**Local PGN (Offline / HPC):**
+### Inference API
 
 ```bash
-python train.py --data_path /path/to/grandmaster_games.pgn --out_dir ./checkpoints
+cd api
+uvicorn app:app --host 0.0.0.0 --port 7860
 ```
-
-**Key Arguments:**
-
-- `--resume_from <path>`: Resume training or Transfer Learn from a checkpoint.
-- `--save_every <steps>`: Checkpoint interval.
-- `--config <path>`: Path to JSON config (default: `model_config.json`).
-
-### 2. Evaluation
-
-To evaluate the model's perplexity and loss on **unseen games** (automatically skips games seen during training if `training_state.json` is present):
 
 ```bash
-python evaluate.py --checkpoint ./checkpoints --test_games 1000
+curl -X POST http://localhost:7860/predict \
+  -H "Content-Type: application/json" \
+  -d '{"fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "model_size": "small"}'
 ```
 
-### 3. Web Playground
-
-Test your model interactively!
+### Frontend
 
 ```bash
-cd board
-python app.py
+cd web
+bun install
+bun dev
 ```
 
-Open **http://localhost:8888** in your browser.  
-_The playground automatically masks illegal moves to ensure a smooth experience during early training._
+### Docker (HF Space)
 
-## ⚙️ Configuration
-
-The model architecture is defined in `model_config.json`:
-
-```json
-{
-  "vocab_size": 5000,
-  "d_model": 256,
-  "n_layers": 8,
-  "n_heads": 8,
-  "max_seq_len": 79,
-  "num_classes": 5000,
-  "dropout": 0.0
-}
+```bash
+docker build -f api/Dockerfile -t artoria-api .
+docker run -p 7860:7860 artoria-api
 ```
 
-_(Default is a lightweight prototype. Scale `n_layers` to 16+ and `d_model` to 512+ for Grandmaster performance)._
+## Links
 
-## 📈 Status
-
-- **Phase 1 (Current)**: Pre-training on ~2000 ELO Lichess games (Behavioral Cloning / Policy Only).
-- **Phase 2 (Planned)**: Fine-tuning on Grandmaster datasets (>2500 ELO).
-  - _Note_: The model currently predicts _moves_ (Policy). Future versions will include a **State-Value Head** (Win Probability) trained via transfer learning on top of this pre-trained base.
+- Models: [huggingface.co/Shinapri/artoria-zero](https://huggingface.co/Shinapri/artoria-zero)
+- Paper: [arXiv:2402.04494](https://arxiv.org/abs/2402.04494)
 
 ## License
 

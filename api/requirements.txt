@@ -1,0 +1,5 @@
+torch>=2.0.0
+chess>=1.11.2
+fastapi>=0.135.2
+uvicorn>=0.42.0
+huggingface-hub>=0.20.0
