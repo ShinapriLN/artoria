@@ -34,9 +34,21 @@ export default function Home() {
         <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-4">
           Artoria<span className="text-blue-400">Zero</span>
         </h1>
-        <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto">
-          Grandmaster-Level Chess Without Search. A decoder-only transformer
-          that plays chess through pure pattern recognition.
+        <p className="text-xl text-zinc-400 mb-3 max-w-2xl mx-auto">
+          A decoder-only transformer that plays chess through pure pattern
+          recognition — no search, no MCTS.
+        </p>
+        <p className="text-sm text-zinc-500 mb-8">
+          Implementation inspired by{" "}
+          <a
+            href="https://arxiv.org/abs/2402.04494"
+            className="text-zinc-400 hover:text-zinc-300 underline underline-offset-2"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            &ldquo;Grandmaster-Level Chess Without Search&rdquo;
+          </a>{" "}
+          (Ruoss et al., 2024) — not the original paper&apos;s model
         </p>
         <div className="flex gap-4 justify-center">
           <Link

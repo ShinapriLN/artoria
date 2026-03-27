@@ -222,9 +222,9 @@ export default function PlayPage() {
       <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
 
         {/* Eval bar + Board */}
-        <div className="flex gap-2 items-stretch">
+        <div className="flex gap-2 w-full max-w-[560px] lg:max-w-none lg:w-auto">
           {/* Vertical eval bar */}
-          <div className="flex flex-col w-5 rounded-md overflow-hidden border border-zinc-700 self-stretch" title={`White: ${whitePercent.toFixed(0)}%`}>
+          <div className="flex flex-col w-4 shrink-0 rounded-md overflow-hidden border border-zinc-700 self-stretch" title={`White: ${whitePercent.toFixed(0)}%`}>
             <div
               style={{ flex: `${100 - whitePercent} 0 0%` }}
               className="bg-zinc-900 transition-all duration-700"
@@ -236,7 +236,7 @@ export default function PlayPage() {
           </div>
 
           {/* Board */}
-          <div style={{ width: 560 }}>
+          <div className="flex-1 lg:w-[560px] lg:flex-none">
             <Chessboard
               options={{
                 position: boardFen,
@@ -258,7 +258,7 @@ export default function PlayPage() {
         </div>
 
         {/* Side panel */}
-        <div className="flex flex-col gap-3 w-56">
+        <div className="flex flex-col gap-3 w-full lg:w-56">
 
           {/* Status */}
           <div className="px-3 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/50">
@@ -278,10 +278,7 @@ export default function PlayPage() {
 
           {/* Model selector */}
           <div className="px-3 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900/50">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-zinc-500">Model</p>
-              {lockedModel && <span className="text-xs text-yellow-500/80">locked</span>}
-            </div>
+            <p className="text-xs text-zinc-500 mb-2">Model</p>
             <div className="flex gap-1.5">
               {(["small", "mid", "large"] as ModelSize[]).map((size) => (
                 <button
